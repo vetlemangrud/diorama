@@ -49,8 +49,8 @@ void main()
 {
   color = vec4(0.0);
 
-  for (int i = 0; i < splats.length(); i++) {
-    if(sqrdist(vec2(gl_FragCoord), clipToScreen(vec3(splats[i].position))) < 16) {
+  for (int i = 0; i < 10000;i++) {
+    if(sqrdist(vec2(gl_FragCoord), clipToScreen(vec3(computedSplats[i].transformedPosition))) < 16) {
       color = computedSplats[i].color;
     }
   }

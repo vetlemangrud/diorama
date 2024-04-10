@@ -27,8 +27,8 @@ layout(std430, binding = 1) buffer TransformedSplats {
   ComputeOutput computedSplats[];
 };
 
-uniform vec4 ViewMatrix;
-uniform vec4 ProjectionMatrix;
+uniform mat4 ViewMatrix;
+uniform mat4 ProjectionMatrix;
 
 // Peter-Pike Sloan, Efficient Spherical Harmonic Evaluation, Journal of Computer Graphics Techniques (JCGT), vol. 2, no. 2, 84-90, 2013 Available online http://jcgt.org/published/0002/02/06/
 
@@ -62,7 +62,7 @@ void main() {
     Splat splat = splats[splatIndex];
     // Position
     vec3 originalPosition = splat.position;
-    vec4 clipPos = ProjectionMatrix * ViewMatrix * vec4(originalPosition, 1.0f);
+    vec4 clipPos = ViewMatrix * vec4(originalPosition, 1.0f);
     computedSplats[splatIndex].transformedPosition = vec3(clipPos / clipPos.w);
 
     // Color
