@@ -2,18 +2,28 @@
 
 layout(local_size_x = 64) in; //64 Seems to be normal, I don't know too much about this stuff
 
+uniform mat4 ViewMatrix;
+uniform mat4 ProjectionMatrix;
+uniform float W;
+uniform float H;
+uniform float focal_x;
+uniform float focal_y;
+uniform float tan_fovx;
+uniform float tan_fovy;
+
 struct Splat {
   vec3 position;
   vec3 normal;
   float f_values[45]; // Coefficients for a Spherical Harmonics
                                // function defining color
   float opacity;
-  vec3 scale;
-  vec4 rotation;
+  float covariance[6];
 };
 
 struct ComputeOutput {
   vec3 transformedPosition;
+  vec3 cov;
+  vec3 conic;
   vec4 color;
 };
 
@@ -27,10 +37,9 @@ layout(std430, binding = 1) buffer TransformedSplats {
   ComputeOutput computedSplats[];
 };
 
-uniform mat4 ViewMatrix;
-uniform mat4 ProjectionMatrix;
 
-// Peter-Pike Sloan, Efficient Spherical Harmonic Evaluation, Journal of Computer Graphics Techniques (JCGT), vol. 2, no. 2, 84-90, 2013 Available online http://jcgt.org/published/0002/02/06/
+// This function is from a paper on computing Spherical Harmonics
+//Peter-Pike Sloan, Efficient Spherical Harmonic Evaluation, Journal of Computer Graphics Techniques (JCGT), vol. 2, no. 2, 84-90, 2013 Available online http://jcgt.org/published/0002/02/06/
 
 float[9] SHNewEval3(const float fX, const float fY, const float fZ) {
   float fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;
@@ -55,6 +64,50 @@ float[9] SHNewEval3(const float fX, const float fY, const float fZ) {
   return pSH;
 }
 
+//This function is from https://github.com/kishimisu/Gaussian-Splatting-WebGL/blob/main/shaders/splat_vertex.glsl
+vec3 computeCov2D(vec3 mean, float focal_x, float focal_y, float tan_fovx, float tan_fovy, float[6] cov3D, mat4 viewmatrix) {
+    vec4 t = viewmatrix * vec4(mean, 1.0);
+
+    float limx = 1.3 * tan_fovx;
+    float limy = 1.3 * tan_fovy;
+    float txtz = t.x / t.z;
+    float tytz = t.y / t.z;
+    t.x = min(limx, max(-limx, txtz)) * t.z;
+    t.y = min(limy, max(-limy, tytz)) * t.z;
+
+    mat3 J = mat3(
+        focal_x / t.z, 0, -(focal_x * t.x) / (t.z * t.z),
+        0, focal_y / t.z, -(focal_y * t.y) / (t.z * t.z),
+        0, 0, 0
+    );
+
+    mat3 W =  mat3(
+        viewmatrix[0][0], viewmatrix[1][0], viewmatrix[2][0],
+        viewmatrix[0][1], viewmatrix[1][1], viewmatrix[2][1],
+        viewmatrix[0][2], viewmatrix[1][2], viewmatrix[2][2]
+    );
+
+
+    mat3 c = mat3(
+        cov3D[0], cov3D[1], cov3D[2],
+        cov3D[1], cov3D[3], cov3D[4],
+        cov3D[2], cov3D[4], cov3D[5]
+    );
+
+    mat3 T = W * J;
+
+    mat3 Vrk = mat3(
+        cov3D[0], cov3D[1], cov3D[2],
+        cov3D[1], cov3D[3], cov3D[4],
+        cov3D[2], cov3D[4], cov3D[5]
+    );
+
+    mat3 cov = transpose(T) * transpose(Vrk) * T;
+
+    cov[0][0] += .3;
+    cov[1][1] += .3;
+    return vec3(cov[0][0], cov[0][1], cov[1][1]);}
+
 void main() {
   uint splatIndex = gl_GlobalInvocationID.x;
 
@@ -62,8 +115,8 @@ void main() {
     Splat splat = splats[splatIndex];
     // Position
     vec3 originalPosition = splat.position;
-    vec4 clipPos = ViewMatrix * vec4(originalPosition, 1.0f);
-    computedSplats[splatIndex].transformedPosition = vec3(clipPos / clipPos.w);
+    vec4 clipPos = ProjectionMatrix * ViewMatrix * vec4(originalPosition, 1.0f);
+    computedSplats[splatIndex].transformedPosition = clipPos.xyz / clipPos.w;
 
     // Color
     vec3 direction = normalize(originalPosition);
@@ -76,6 +129,18 @@ void main() {
       c += sPH[i] * vec3(redC, greenC, blueC); 
     }
     computedSplats[splatIndex].color = vec4(c.r, c.g, c.b, 1.0);
+
+    // Covariance
+    vec3 covariance = computeCov2D(splat.position, focal_x, focal_y, tan_fovx, tan_fovy, splat.covariance, ViewMatrix);
+
+    // Invert covariance (EWA algorithm)
+    float det = (covariance.x * covariance.z - covariance.y * covariance.y);
+    float det_inv = 1. / det;
+    vec3 conic = vec3(covariance.z, -covariance.y, covariance.x) * det_inv;
+
+    computedSplats[splatIndex].cov = covariance;
+    computedSplats[splatIndex].conic = conic;
+
   }
 }
 

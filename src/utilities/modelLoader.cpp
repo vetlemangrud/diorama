@@ -1,8 +1,30 @@
+#include "glm/ext/matrix_transform.hpp"
+#include "glm/fwd.hpp"
+#include <glm/gtc/quaternion.hpp>
+#include "glm/matrix.hpp"
 #include "model.hpp"
 #include <cerrno>
 #include <fstream>
 #include <iostream>
 #include <string>
+
+void compute3DCovariance(float covariance[6], float scale[3], float rotation[4]) {
+  glm::mat3 scaleMatrix = glm::scale(glm::mat4(1.0), glm::vec3(scale[0], scale[1], scale[2]));
+  //
+  // Compute rotation matrix from quaternion
+  glm::mat3 rotationMatrix = glm::mat3_cast( glm::quat(rotation[0],rotation[1],rotation[2],rotation[3]));
+
+  // In the "3D Gaussian Splatting for Real-Time Radiance Field Rendering" Cov3D = R * S * S' * R' (' is transposed)
+  glm::mat3 covarianceMatrix = rotationMatrix * scaleMatrix * glm::transpose(scaleMatrix) * glm::transpose(rotationMatrix);
+
+  //Get the top right of the matix, it is symmetrical
+  covariance[0] = covarianceMatrix[0][0];
+  covariance[1] = covarianceMatrix[1][0];
+  covariance[2] = covarianceMatrix[2][0];
+  covariance[3] = covarianceMatrix[1][1];
+  covariance[4] = covarianceMatrix[2][1];
+  covariance[5] = covarianceMatrix[2][2];
+}    
 
 Model loadModel(const std::string filename) {
   std::ifstream inputFile(filename, std::ios::binary);
@@ -26,7 +48,6 @@ Model loadModel(const std::string filename) {
 
       vertex_count = std::stoi(line.substr(COUNT_PROP.length(), line.length()));
     }
-    // std::cout << "Header line: " << line << std::endl;
   }
   std::vector<Splat> splats = {};
 
@@ -44,21 +65,11 @@ Model loadModel(const std::string filename) {
       splat.f_values[i - 6] = values[i];
     }
     splat.opacity = values[54];
-    splat.scale = glm::vec3(values[55], values[56], values[57]);
-    splat.rotation = glm::quat(values[58], values[59], values[60], values[61]);
+    float scale[3] = {values[55], values[56], values[57]};
+    float rotation[4] = {values[58], values[59], values[60], values[61]};
 
+    compute3DCovariance(splat.covariance, scale, rotation);
     splats.push_back(splat);
-  }
-
-  float max_opa = -9999;
-  float min_opa = 9999;
-  for (int i = 0; i < vertex_count; i++) {
-    if (splats.at(i).opacity > max_opa) {
-      max_opa = splats.at(i).opacity;
-    }
-    if (splats.at(i).opacity < min_opa) {
-      min_opa = splats.at(i).opacity;
-    }
   }
 
   inputFile.close();
