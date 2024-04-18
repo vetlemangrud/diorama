@@ -4,3 +4,5 @@
 void initDiorama(GLFWwindow* window, CommandLineOptions options);
 void updateFrame(GLFWwindow* window);
 void renderFrame(GLFWwindow* window);
+void explode(float power);
+void stopExploding();

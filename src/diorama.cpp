@@ -1,4 +1,5 @@
 #include "GLFW/glfw3.h"
+#include "diorama.hpp"
 #include "camera.hpp"
 #include "glad/glad.h"
 #include "glm/ext/matrix_transform.hpp"
@@ -18,12 +19,19 @@ Gloom::Shader *renderShader;
 
 unsigned int VAO; // Vertex array for the "screen"
 unsigned int VBO; // Vertex buffer for the positions of the corners
+float explosionProgress;
+float explosionPower;
+bool explosionHappening;
+glm::vec3 gravity;
+
 
 void initDiorama(GLFWwindow *window, CommandLineOptions options) {
+  explosionHappening = false;
+  gravity = glm::vec3(0,0.002,0);
   model = loadModel(
       "../assets/sled.ply"); // Asset by Kevin Kwok (https://antimatter15.com/)
   initCamera();
-    moveBackwards(3);
+    moveBackwards(6);
   glGenVertexArrays(1, &VAO);
   glBindVertexArray(VAO);
   glGenBuffers(1, &VBO);
@@ -202,6 +210,9 @@ void initDiorama(GLFWwindow *window, CommandLineOptions options) {
 }
 
 void updateFrame(GLFWwindow *window) {
+  if(explosionHappening){
+    explosionProgress +=1;
+  }
 }
 
 void renderFrame(GLFWwindow *window) {
@@ -220,7 +231,31 @@ void renderFrame(GLFWwindow *window) {
                      glm::value_ptr(viewMatrix));
   glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE,
                      glm::value_ptr(projection));
+
+
+  int isExplodingLocation = renderShader->getUniformFromName("isExploding");
+  int explosionPowerLocation = renderShader->getUniformFromName("explosionPower");
+  int explosionProgressLocation = renderShader->getUniformFromName("explosionProgress");
+  int gravityLocation = renderShader->getUniformFromName("g");
+  int centerLocation = renderShader->getUniformFromName("center");
+  glUniform1i(isExplodingLocation, explosionHappening);
+  glUniform1f(explosionPowerLocation, explosionPower);
+  glUniform1f(explosionProgressLocation, explosionProgress);
+  glUniform3fv(gravityLocation, 1, glm::value_ptr(gravity));
+  glUniformMatrix4fv(centerLocation, 1, GL_FALSE,
+                     glm::value_ptr(model.center));
   // Run render shader
   glBindVertexArray(VAO);
   glDrawArraysInstanced(GL_TRIANGLES, 0, 36, model.positions.size());
+}
+
+void explode(float power) {
+  explosionHappening = true;
+  explosionProgress = 0;
+  explosionPower = power;
+
+}
+
+void stopExploding(){
+  explosionHappening = false;
 }

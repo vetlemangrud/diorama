@@ -1,4 +1,5 @@
 #include "glm/ext/matrix_transform.hpp"
+#include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
 #include <glm/gtc/quaternion.hpp>
 #include "glm/matrix.hpp"
@@ -7,6 +8,9 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 
 void compute3DCovariance(float covariance[6], float scale[3], float rotation[4]) {
   glm::mat3 scaleMatrix = glm::scale(glm::mat4(1.0), glm::vec3(scale[0], scale[1], scale[2]));
@@ -54,6 +58,8 @@ SplatData loadModel(const std::string filename) {
   data.positions = {};
   data.normals = {};
   data.f_values = {}; 
+  glm::vec3 minPos = glm::vec3(999,999,999);
+  glm::vec3 maxPos = glm::vec3(-999,-999,-999);
 
   // Read splats
   const int PROPERTY_COUNT = 62;
@@ -62,7 +68,26 @@ SplatData loadModel(const std::string filename) {
 
     inputFile.read(reinterpret_cast<char *>(&values),
                    sizeof(float) * PROPERTY_COUNT);
-    data.positions.push_back( glm::vec4(values[0], values[1], values[2],1.0));
+    glm::vec4 pos =  glm::vec4(values[0], values[1], values[2],1.0);
+    if (pos.x < minPos.x) {
+      minPos.x = pos.x;
+    }
+    if (pos.x > maxPos.x) {
+      maxPos.x = pos.x;
+    }
+    if (pos.y < minPos.y) {
+      minPos.y = pos.y;
+    }
+    if (pos.y > maxPos.y) {
+      maxPos.y = pos.y;
+    }
+    if (pos.z < minPos.z) {
+      minPos.z = pos.z;
+    }
+    if (pos.z > maxPos.z) {
+      maxPos.z = pos.z;
+    }
+    data.positions.push_back(pos);
     data.normals.push_back(glm::vec4(values[3], values[4], values[5],1.0));
     F_Values f_values;
     for (int i = 6; i < 3 + 6; i++) {
@@ -78,6 +103,7 @@ SplatData loadModel(const std::string filename) {
     //data.covariances.push_back(covariance);
   }
 
+  data.center = glm::scale(glm::mat4(1.0), glm::vec3(0.5)) * glm::vec4(minPos + maxPos,1.0);
 
   inputFile.close();
   return data;

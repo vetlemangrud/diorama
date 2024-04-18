@@ -14,4 +14,5 @@ struct SplatData {
   std::vector<float> opacities;
   std::vector<glm::vec4> scales;
   std::vector<glm::vec4> rotations;
+  glm::vec4 center;
 };

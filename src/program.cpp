@@ -4,9 +4,9 @@
 #include "diorama.hpp"
 #include "utilities/modelLoader.hpp"
 #include "utilities/window.hpp"
-#include <glm/glm.hpp>
 #include <SFML/Audio.hpp>
 #include <SFML/System/Time.hpp>
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <utilities/glutils.h>
@@ -79,5 +79,11 @@ void handleKeyboardInput(GLFWwindow *window) {
   }
   if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
     lookUp(0.01);
+  }
+  if (glfwGetKey(window, GLFW_KEY_9) == GLFW_PRESS) {
+    explode(0.000000001);
+  }
+  if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS) {
+    stopExploding();
   }
 }

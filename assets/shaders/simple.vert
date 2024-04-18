@@ -28,6 +28,14 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+//Explosions
+uniform int isExploding;
+uniform float explosionPower;
+uniform float explosionProgress;
+uniform vec3 g;
+uniform vec4 center;
+
+
 float[9] SHNewEval3(const float fX, const float fY, const float fZ) {
   float fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;
   float fZ2 = fZ * fZ;
@@ -58,10 +66,30 @@ mat3 quatToMat(vec4 q) {
 }
 
 void main() {
-    
+
+    //Calculate explosion offset
+    //a(t) = g
+    //v(t) = gt + v0
+    //s(t) = (1/2)gt^2 + v0t + s0
+    //v0 = fromcenter/scale
+
+    vec3 explosionOffset = vec3(0,0,0);
     vec3 scale = vec3(scales[gl_InstanceID]);
+    vec3 fromCenter = vec3(positions[gl_InstanceID]) - vec3(center) - vec3(0,2,0);
+    float impactDelay = 4*length(fromCenter);
+    if(isExploding > 0) {
+        
+        float mass = scale.x * scale.y * scale.z;
+        mass = max(mass, 0.00000001);
+        explosionOffset += g*explosionProgress*explosionProgress * 0.5;
+        if(explosionProgress - impactDelay >= 0){
+
+            explosionOffset += normalize(fromCenter) * (explosionPower/mass) * (explosionProgress-impactDelay);
+        }
+    }
+    
     mat3 rotation = quatToMat(rotations[gl_InstanceID]);
-    vec3 vertexPos = rotation * (scale * aPos) + vec3(positions[gl_InstanceID]);
+    vec3 vertexPos = rotation * (scale * aPos) + vec3(positions[gl_InstanceID]) + explosionOffset;
 
     gl_Position = projection * view * model * vec4(vertexPos, 1.0);
 
