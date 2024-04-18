@@ -1,15 +1,14 @@
-// Local headers
 #include "program.hpp"
+#include "GLFW/glfw3.h"
+#include "camera.hpp"
 #include "diorama.hpp"
 #include "utilities/modelLoader.hpp"
 #include "utilities/window.hpp"
 #include <glm/glm.hpp>
-// glm::translate, glm::rotate, glm::scale, glm::perspective
 #include <SFML/Audio.hpp>
 #include <SFML/System/Time.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
 #include <utilities/glutils.h>
 #include <utilities/shader.hpp>
 #include <utilities/shapes.h>
@@ -56,5 +55,29 @@ void handleKeyboardInput(GLFWwindow *window) {
   // Use escape key for terminating the GLFW window
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, GL_TRUE);
+  }
+  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+    moveForwards(0.03);
+  }
+  if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+    moveBackwards(0.03);
+  }
+  if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+    lookLeft(0.01);
+  }
+  if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+    lookRight(0.01);
+  }
+  if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+    moveUp(0.02);
+  }
+  if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+    moveDown(0.02);
+  }
+  if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+    lookDown(0.01);
+  }
+  if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+    lookUp(0.01);
   }
 }

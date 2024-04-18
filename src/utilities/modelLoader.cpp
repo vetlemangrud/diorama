@@ -26,7 +26,7 @@ void compute3DCovariance(float covariance[6], float scale[3], float rotation[4])
   covariance[5] = covarianceMatrix[2][2];
 }    
 
-Model loadModel(const std::string filename) {
+SplatData loadModel(const std::string filename) {
   std::ifstream inputFile(filename, std::ios::binary);
   if (!inputFile.is_open()) {
     std::cerr << "Error opening file" << std::endl;
@@ -49,31 +49,36 @@ Model loadModel(const std::string filename) {
       vertex_count = std::stoi(line.substr(COUNT_PROP.length(), line.length()));
     }
   }
-  std::vector<Splat> splats = {};
+  
+  SplatData data;
+  data.positions = {};
+  data.normals = {};
+  data.f_values = {}; 
 
   // Read splats
-  int PROPERTY_COUNT = 62;
+  const int PROPERTY_COUNT = 62;
   for (int i = 0; i < vertex_count; i++) {
     float values[PROPERTY_COUNT];
 
     inputFile.read(reinterpret_cast<char *>(&values),
                    sizeof(float) * PROPERTY_COUNT);
-    Splat splat;
-    splat.position = glm::vec3(values[0], values[1], values[2]);
-    splat.normal = glm::vec3(values[3], values[4], values[5]);
-    for (int i = 6; i < 48 + 6; i++) {
-      splat.f_values[i - 6] = values[i];
+    data.positions.push_back( glm::vec4(values[0], values[1], values[2],1.0));
+    data.normals.push_back(glm::vec4(values[3], values[4], values[5],1.0));
+    F_Values f_values;
+    for (int i = 6; i < 3 + 6; i++) {
+      f_values.values[i - 6] = values[i];
     }
-    splat.opacity = values[54];
-    float scale[3] = {values[55], values[56], values[57]};
-    float rotation[4] = {values[58], values[59], values[60], values[61]};
+    data.f_values.push_back(f_values);
+    data.opacities.push_back(values[54]);
+    data.scales.push_back(glm::exp(glm::vec4(values[55], values[56], values[57],1.0)));
+    data.rotations.push_back(glm::normalize(glm::vec4(values[58], values[59], values[60], values[61])));
 
-    compute3DCovariance(splat.covariance, scale, rotation);
-    splats.push_back(splat);
+    float covariance[6];
+    //compute3DCovariance(covariance, scale, rotation);
+    //data.covariances.push_back(covariance);
   }
 
+
   inputFile.close();
-  Model model;
-  model.splats = splats;
-  return model;
+  return data;
 }
