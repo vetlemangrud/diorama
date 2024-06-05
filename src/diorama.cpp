@@ -29,7 +29,7 @@ void initDiorama(GLFWwindow *window, CommandLineOptions options) {
   explosionHappening = false;
   gravity = glm::vec3(0,0.002,0);
   model = loadModel(
-      "../assets/sled.ply"); // Asset by Kevin Kwok (https://antimatter15.com/)
+      "../assets/vetle.ply"); // Asset by Kevin Kwok (https://antimatter15.com/)
   initCamera();
     moveBackwards(6);
   glGenVertexArrays(1, &VAO);

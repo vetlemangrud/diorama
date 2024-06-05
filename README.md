@@ -1,6 +1,8 @@
 # TDT4230 - Graphics and Visualization
 ## Final Project - Diorama: 3D Gaussian Splatting Rasterizer
 
+![Screenshot](screenshot.png)
+
 This is my go at implementing a [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) Rasterizer.
 Controls are wacky, but try to make them work :P
 - UP to move forward
